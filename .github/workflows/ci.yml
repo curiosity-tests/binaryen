@@ -1,4 +1,5 @@
 name: CI
+run-name: "CI ${{ inputs.leg || github.event_name }} ${{ inputs.racecar_run }}"
 
 on:
   # If we run CI on all branches then we end up doing duplicate work for
@@ -9,6 +10,24 @@ on:
       - kripken/*
   pull_request:
 
+  workflow_dispatch:
+    inputs:
+      leg:
+        description: "baseline (uninstrumented) or instrumented (under chalk/curiosity)"
+        type: choice
+        options: [instrumented, baseline]
+        default: baseline
+      profile:
+        description: "CrashOverride chalk profile"
+        type: string
+        default: curiosity-tests-racecar
+      racecar_run:
+        description: "racecar correlation token, echoed into the run name"
+        type: string
+        default: ""
+
+env:
+  CHALK_ON: ${{ inputs.leg == 'instrumented' }}
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -55,7 +74,7 @@ jobs:
         # Build using the oldest support macOS version.  For emsdk this is
         # currently macos-13, but unfortunately that doesn't exist in github
         # actions so we settle for macos-14.
-        os: [ubuntu-22.04, ubuntu-latest, macos-14, windows-latest, windows-11-arm]
+        os: [ubuntu-22.04, ubuntu-latest]
     steps:
     - uses: actions/setup-python@v5
       with:
@@ -380,6 +399,7 @@ jobs:
 
   # Windows + gcc needs work before the tests will run, so just test the compile
   build-mingw:
+    if: false   # racecar: non-Linux runner, not measured here
     name: mingw
     runs-on: windows-latest
     steps:
